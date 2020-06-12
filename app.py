@@ -29,19 +29,25 @@ def check_complete(t, tasklist, timeout):
         return False
 
 # async def model_loop():
-def model_loop():
+def model_loop(loop):
     tasklist =[]
     
 
+    print(f"Model start")
     for i in range(4):
-        print(f"Model start")
-        tasklist.append(asyncio.ensure_future(save_data(i, f'hello {i}')))
+        tasklist.append(asyncio.ensure_future(save_data(i + 10, f'hello {i}')))
+        loop.run_until_complete(async_wait(0.001))  # trigger the run of all other loops
         print(f"Result write called {time.strftime('%X')}")
-    
-    
+        
+        # simulating model doing stuff, 
+        # ensure_future should start before this all finishes
+        for j in range(50000000):  # should take ~1 seconds to complete
+            continue 
+        print(f"model ran {i}th loop")
+        # loop.run_until_complete(async_wait(0.1))
+            
         # if model_loop is not an async run, just adding ensure future won't actually run them
     
-    print("doing more things")
     return tasklist
 
 def main():
@@ -49,15 +55,14 @@ def main():
     print(f"started at {time.strftime('%X')}")
     # asyncio.run(model_loop())
     
-    timeout_length = 2  # seconds of timeout
-    timeout = time.time() + timeout_length
     
-    tasklist = model_loop()
-
-    # time.sleep(5)
     loop = asyncio.get_event_loop()
-    # loop.run_until_complete(tasklist[0])
+    tasklist = model_loop(loop)
+
+    timeout_length = 15  # seconds of timeout
+    timeout = time.time() + timeout_length
     while not check_complete(1, tasklist, timeout):  # need this to run to actually execute async writes:
+        print('start checking if all are done')
         loop.run_until_complete(async_wait(1))
         # loop.run_until_complete(check_complete(1, tasklist, timeout))  # need this to run to actually execute async writes
         # check_complete(1, tasklist, timeout)  # need this to run to actually execute async writes
