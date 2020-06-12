@@ -2,62 +2,62 @@ import asyncio
 import time
 import pandas as pd
 
+
 async def save_data(delay, what):
     # await asyncio.sleep(delay)
     await asyncio.sleep(delay)
-    print(f"{what} delay {delay} {time.strftime('%X')}")
-    pd.DataFrame([delay]).to_json(f"test{delay}.json")
+    print(f"Writing {what} taking time {delay} {time.strftime('%X')}")
+    pd.DataFrame([delay]).to_json(f"test{what}.json")
 
-async def check_complete(t, tasklist, timeout):
+def check_complete(t, tasklist, timeout):
     """
     Note these won't print anything, they will be on another thread
     """
     print([_.done() for _ in tasklist])
     print(timeout - time.time())
-    if time.time() > timeout:  # timeout no longer works here
+    if all([_.done() for _ in tasklist]):
+        print("all done")
+        return True
+    elif time.time() > timeout:
         print('timeout exceeded')
         return False
-    await asyncio.sleep(5)
-    return True
+    else:
+        # await asyncio.sleep(5)  # for demo app need this wait, or it will go by too quickly
+        return False
 
 # async def model_loop():
 def model_loop():
     tasklist =[]
-    loop = asyncio.get_event_loop()
-    for i in range(4):
-        print(f"Doing things")
-        
-        tasklist.append(asyncio.ensure_future(save_data(i, f'hello {i}')))
-        # tasklist.append(asyncio.create_task(
-        #     save_data(i, f'hello {i}')))
-        # # await tasklist[i]  # doesn't work
-        print(f"Doing other things {time.strftime('%X')}")
-    all_done = [False] * len(tasklist)
-    timeout = time.time() + 1
     
 
-    while not all([_.done() for _ in tasklist]):
-        if loop.run_until_complete(check_complete(1, tasklist, timeout)):
-            # this loop above is a blocking loop, will not run until complete
-            print('should be breaking')
-            break  # timeout exceeded
-        #     await asyncio.sleep(1)
+    for i in range(4):
+        print(f"Model start")
+        tasklist.append(asyncio.ensure_future(save_data(3, f'hello {i}')))
+        print(f"Result write called {time.strftime('%X')}")
     
-    # for i in range(4):
-    #     await tasklist[i]  # works...but requires al ltasks to be defined
-    # await asyncio.gather(*tasklist)  # does the same as above
-    # await asyncio.sleep(5)
+    
+        # if model_loop is not an async run, just adding ensure future won't actually run them
+    
+    print("doing more things")
+    return tasklist
 
 def main():
 
     print(f"started at {time.strftime('%X')}")
     # asyncio.run(model_loop())
-    model_loop()
+    
+    timeout_length = 600  # seconds of timeout
+    timeout = time.time() + timeout_length
+    
+    tasklist = model_loop()
 
-    # Wait until both tasks are completed (should take
-    # around 2 seconds.)
-    # await task1
-    # await task2
+    # time.sleep(5)
+    loop = asyncio.get_event_loop()
+    while not check_complete(1, tasklist, timeout):  # need this to run to actually execute async writes:
+        # loop.run_until_complete(check_complete(1, tasklist, timeout))  # need this to run to actually execute async writes
+        loop.run_until_complete(tasklist[0])
+        # check_complete(1, tasklist, timeout)  # need this to run to actually execute async writes
+        # break
 
     print(f"finished at {time.strftime('%X')}")
 
