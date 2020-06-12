@@ -9,6 +9,9 @@ async def save_data(delay, what):
     print(f"Writing {what} taking time {delay} {time.strftime('%X')}")
     pd.DataFrame([delay]).to_json(f"test{what}.json")
 
+async def async_wait(wait):
+    await asyncio.sleep(wait)
+
 def check_complete(t, tasklist, timeout):
     """
     Note these won't print anything, they will be on another thread
@@ -20,7 +23,7 @@ def check_complete(t, tasklist, timeout):
         return True
     elif time.time() > timeout:
         print('timeout exceeded')
-        return False
+        return True
     else:
         # await asyncio.sleep(5)  # for demo app need this wait, or it will go by too quickly
         return False
@@ -32,7 +35,7 @@ def model_loop():
 
     for i in range(4):
         print(f"Model start")
-        tasklist.append(asyncio.ensure_future(save_data(3, f'hello {i}')))
+        tasklist.append(asyncio.ensure_future(save_data(i, f'hello {i}')))
         print(f"Result write called {time.strftime('%X')}")
     
     
@@ -46,16 +49,17 @@ def main():
     print(f"started at {time.strftime('%X')}")
     # asyncio.run(model_loop())
     
-    timeout_length = 600  # seconds of timeout
+    timeout_length = 2  # seconds of timeout
     timeout = time.time() + timeout_length
     
     tasklist = model_loop()
 
     # time.sleep(5)
     loop = asyncio.get_event_loop()
+    # loop.run_until_complete(tasklist[0])
     while not check_complete(1, tasklist, timeout):  # need this to run to actually execute async writes:
+        loop.run_until_complete(async_wait(1))
         # loop.run_until_complete(check_complete(1, tasklist, timeout))  # need this to run to actually execute async writes
-        loop.run_until_complete(tasklist[0])
         # check_complete(1, tasklist, timeout)  # need this to run to actually execute async writes
         # break
 
